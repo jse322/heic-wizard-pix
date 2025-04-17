@@ -13,10 +13,11 @@ export async function convertHeicToFormat(
       throw new Error("File is not a HEIC image");
     }
 
+    // Optimize conversion with better quality-to-performance ratio
     const blob = await heic2any({
       blob: file,
       toType: format === "jpeg" ? "image/jpeg" : "image/png",
-      quality: 0.9,
+      quality: format === "jpeg" ? 0.85 : 0.9, // Lower quality for JPEG for faster conversion
     });
 
     return Array.isArray(blob) ? blob[0] : blob;
@@ -26,25 +27,60 @@ export async function convertHeicToFormat(
   }
 }
 
-// New function to handle multiple file conversions
+// Optimized function to handle multiple file conversions with concurrency control
 export async function convertMultipleHeicFiles(
   files: File[],
   format: ConversionFormat
 ): Promise<{blob: Blob, originalFile: File}[]> {
   const results: {blob: Blob, originalFile: File}[] = [];
+  const errors: {file: File, error: any}[] = [];
   
-  // Process each file and collect results
-  const conversions = files.map(async (file) => {
-    try {
-      const blob = await convertHeicToFormat(file, format);
-      return { blob, originalFile: file };
-    } catch (error) {
-      console.error(`Error converting file ${file.name}:`, error);
-      throw error;
-    }
-  });
+  // Use Promise.all with a concurrency limit for better performance
+  // Process in batches of 3 files at a time to avoid memory issues
+  const batchSize = 3;
+  const totalBatches = Math.ceil(files.length / batchSize);
   
-  return Promise.all(conversions);
+  for (let i = 0; i < totalBatches; i++) {
+    const start = i * batchSize;
+    const end = Math.min(start + batchSize, files.length);
+    const batchFiles = files.slice(start, end);
+    
+    // Process this batch concurrently
+    const batchPromises = batchFiles.map(async (file) => {
+      try {
+        const blob = await convertHeicToFormat(file, format);
+        return { blob, originalFile: file, success: true };
+      } catch (error) {
+        console.error(`Error converting file ${file.name}:`, error);
+        return { originalFile: file, error, success: false };
+      }
+    });
+    
+    const batchResults = await Promise.all(batchPromises);
+    
+    // Separate successful conversions and errors
+    batchResults.forEach(result => {
+      if (result.success && 'blob' in result) {
+        results.push({
+          blob: result.blob,
+          originalFile: result.originalFile
+        });
+      } else if (!result.success) {
+        errors.push({
+          file: result.originalFile,
+          error: result.error
+        });
+      }
+    });
+  }
+  
+  // If all conversions failed, throw an error
+  if (results.length === 0 && errors.length > 0) {
+    throw new Error("All conversions failed");
+  }
+  
+  // Return successful conversions
+  return results;
 }
 
 export function generateFileName(originalName: string, format: ConversionFormat): string {

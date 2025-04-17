@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { ConversionFormat, downloadMultipleBlobs } from "@/utils/imageUtils";
-import { Download, RefreshCcw, Sparkles, CheckCircle, Loader2 } from "lucide-react";
+import { Download, RefreshCcw, Sparkles, CheckCircle, Loader2, Zap } from "lucide-react";
 import { toast } from "sonner";
 
 interface ConversionOptionsProps {
@@ -91,7 +91,7 @@ const ConversionOptions: React.FC<ConversionOptionsProps> = ({
           
           <div className="flex items-center space-x-2 border rounded-lg p-4 hover:bg-muted/50 cursor-pointer transition-colors">
             <RadioGroupItem value="jpeg" id="jpeg" />
-            <Label htmlFor="jpeg" className="cursor-pointer">JPG (smaller file size)</Label>
+            <Label htmlFor="jpeg" className="cursor-pointer">JPG (smaller file size, faster conversion)</Label>
           </div>
         </RadioGroup>
       </div>
@@ -114,7 +114,7 @@ const ConversionOptions: React.FC<ConversionOptionsProps> = ({
             </>
           ) : (
             <>
-              <Sparkles className="mr-2 h-4 w-4" />
+              <Zap className="mr-2 h-4 w-4 animate-pulse" />
               Convert {files.length} {files.length === 1 ? 'file' : 'files'} to {selectedFormat.toUpperCase()}
             </>
           )}
@@ -135,7 +135,9 @@ const ConversionOptions: React.FC<ConversionOptionsProps> = ({
         <div className="p-3 bg-muted/30 rounded-md flex items-center border border-muted">
           <Loader2 className="w-4 h-4 mr-2 text-muted-foreground" />
           <p className="text-sm text-muted-foreground">
-            Converting multiple files may take longer depending on their size
+            {files.length > 3 ? 
+              "Files will be processed in batches of 3 for optimal performance" : 
+              "Converting multiple files may take longer depending on their size"}
           </p>
         </div>
       )}
