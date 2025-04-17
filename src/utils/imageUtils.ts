@@ -26,9 +26,51 @@ export async function convertHeicToFormat(
   }
 }
 
+// New function to handle multiple file conversions
+export async function convertMultipleHeicFiles(
+  files: File[],
+  format: ConversionFormat
+): Promise<{blob: Blob, originalFile: File}[]> {
+  const results: {blob: Blob, originalFile: File}[] = [];
+  
+  // Process each file and collect results
+  const conversions = files.map(async (file) => {
+    try {
+      const blob = await convertHeicToFormat(file, format);
+      return { blob, originalFile: file };
+    } catch (error) {
+      console.error(`Error converting file ${file.name}:`, error);
+      throw error;
+    }
+  });
+  
+  return Promise.all(conversions);
+}
+
 export function generateFileName(originalName: string, format: ConversionFormat): string {
   const baseName = originalName.replace(/\.[^/.]+$/, "");
   return `${baseName}.${format === "jpeg" ? "jpg" : format}`;
+}
+
+// New function to batch download multiple files
+export async function downloadMultipleBlobs(
+  blobFileData: {blob: Blob, originalFile: File}[],
+  format: ConversionFormat
+): Promise<void> {
+  if (blobFileData.length === 1) {
+    // Single file download
+    const { blob, originalFile } = blobFileData[0];
+    const fileName = generateFileName(originalFile.name, format);
+    await downloadBlob(blob, fileName);
+    return;
+  }
+  
+  // Create a zip file if there are multiple files
+  // For now, download them sequentially
+  for (const { blob, originalFile } of blobFileData) {
+    const fileName = generateFileName(originalFile.name, format);
+    await downloadBlob(blob, fileName);
+  }
 }
 
 export function blobToDataUrl(blob: Blob): Promise<string> {

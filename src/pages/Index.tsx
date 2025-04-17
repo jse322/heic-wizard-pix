@@ -5,48 +5,67 @@ import ImagePreview from "@/components/ImagePreview";
 import ConversionOptions from "@/components/ConversionOptions";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import { ConversionFormat, convertHeicToFormat } from "@/utils/imageUtils";
+import { ConversionFormat, convertMultipleHeicFiles } from "@/utils/imageUtils";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Trash2 } from "lucide-react";
+import { Trash2, FilesIcon } from "lucide-react";
 
 const Index = () => {
-  const [file, setFile] = useState<File | null>(null);
-  const [convertedBlob, setConvertedBlob] = useState<Blob | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
+  const [convertedBlobs, setConvertedBlobs] = useState<{ blob: Blob, originalFile: File }[] | null>(null);
   const [selectedFormat, setSelectedFormat] = useState<ConversionFormat>("png");
   const [isConverting, setIsConverting] = useState(false);
 
-  const handleFileAccepted = (file: File) => {
-    setFile(file);
-    setConvertedBlob(null);
+  const handleFilesAccepted = (newFiles: File[]) => {
+    setFiles(prev => {
+      // Create a Set to track unique files by name to prevent duplicates
+      const uniqueFileNames = new Set(prev.map(f => f.name));
+      
+      // Filter out duplicates
+      const uniqueNewFiles = newFiles.filter(file => {
+        if (uniqueFileNames.has(file.name)) {
+          return false;
+        }
+        uniqueFileNames.add(file.name);
+        return true;
+      });
+      
+      if (uniqueNewFiles.length < newFiles.length) {
+        toast.info(`${newFiles.length - uniqueNewFiles.length} duplicate files were skipped.`);
+      }
+      
+      return [...prev, ...uniqueNewFiles];
+    });
+    
+    setConvertedBlobs(null);
   };
 
   const handleFormatChange = (format: ConversionFormat) => {
     setSelectedFormat(format);
-    setConvertedBlob(null);
+    setConvertedBlobs(null);
   };
 
   const handleConvert = async () => {
-    if (!file) return;
+    if (!files.length) return;
 
     setIsConverting(true);
-    setConvertedBlob(null);
+    setConvertedBlobs(null);
 
     try {
-      const converted = await convertHeicToFormat(file, selectedFormat);
-      setConvertedBlob(converted);
-      toast.success(`Successfully converted to ${selectedFormat.toUpperCase()}`);
+      const converted = await convertMultipleHeicFiles(files, selectedFormat);
+      setConvertedBlobs(converted);
+      toast.success(`Successfully converted ${converted.length} ${converted.length === 1 ? 'file' : 'files'} to ${selectedFormat.toUpperCase()}`);
     } catch (error) {
       console.error("Error during conversion:", error);
-      toast.error("Failed to convert file. Please try again or check the file format.");
+      toast.error("Failed to convert some files. Please try again or check the file formats.");
     } finally {
       setIsConverting(false);
     }
   };
 
   const handleReset = () => {
-    setFile(null);
-    setConvertedBlob(null);
+    setFiles([]);
+    setConvertedBlobs(null);
   };
 
   return (
@@ -56,32 +75,61 @@ const Index = () => {
           <Header />
 
           <main className="space-y-8">
-            {!file ? (
-              <FileUpload onFileAccepted={handleFileAccepted} />
+            {files.length === 0 ? (
+              <FileUpload onFilesAccepted={handleFilesAccepted} />
             ) : (
               <>
                 <div className="flex justify-between items-center">
-                  <h2 className="text-xl font-medium">Preview & Convert</h2>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={handleReset}
-                    className="text-muted-foreground hover:text-destructive"
-                  >
-                    <Trash2 className="w-4 h-4 mr-2" />
-                    Clear
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-xl font-medium">Preview & Convert</h2>
+                    <span className="bg-wizard-purple/10 text-wizard-purple text-xs px-2 py-1 rounded-full">
+                      {files.length} {files.length === 1 ? 'file' : 'files'}
+                    </span>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => {
+                        // Open file dialog to add more files
+                        const input = document.createElement('input');
+                        input.type = 'file';
+                        input.accept = '.heic,.heif';
+                        input.multiple = true;
+                        input.onchange = (e) => {
+                          const target = e.target as HTMLInputElement;
+                          if (target.files && target.files.length > 0) {
+                            handleFilesAccepted(Array.from(target.files));
+                          }
+                        };
+                        input.click();
+                      }}
+                      className="text-muted-foreground"
+                    >
+                      <FilesIcon className="w-4 h-4 mr-2" />
+                      Add More
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={handleReset}
+                      className="text-muted-foreground hover:text-destructive"
+                    >
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      Clear All
+                    </Button>
+                  </div>
                 </div>
                 
                 <ImagePreview
-                  file={file}
-                  convertedBlob={convertedBlob}
+                  files={files}
+                  convertedBlobs={convertedBlobs}
                   isConverting={isConverting}
                 />
                 
                 <ConversionOptions
-                  file={file}
-                  convertedBlob={convertedBlob}
+                  files={files}
+                  convertedBlobs={convertedBlobs}
                   selectedFormat={selectedFormat}
                   isConverting={isConverting}
                   onFormatChange={handleFormatChange}

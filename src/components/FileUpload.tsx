@@ -1,36 +1,40 @@
 
 import React, { useCallback, useState } from "react";
 import { useDropzone } from "react-dropzone";
-import { Upload, FileImage, AlertCircle } from "lucide-react";
+import { Upload, FileImage, AlertCircle, FilesIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
 interface FileUploadProps {
-  onFileAccepted: (file: File) => void;
+  onFilesAccepted: (files: File[]) => void;
 }
 
-const FileUpload: React.FC<FileUploadProps> = ({ onFileAccepted }) => {
+const FileUpload: React.FC<FileUploadProps> = ({ onFilesAccepted }) => {
   const [dragActive, setDragActive] = useState(false);
 
   const onDrop = useCallback(
     (acceptedFiles: File[]) => {
       if (acceptedFiles && acceptedFiles.length > 0) {
-        const file = acceptedFiles[0];
-        
-        // Check if the file is a HEIC file
-        const isHeic = 
+        // Filter to only accept HEIC files
+        const heicFiles = acceptedFiles.filter(file => 
           file.name.toLowerCase().endsWith('.heic') || 
-          file.type.includes('heic');
+          file.type.includes('heic')
+        );
           
-        if (isHeic) {
-          onFileAccepted(file);
-          toast.success("HEIC file uploaded successfully!");
+        if (heicFiles.length > 0) {
+          onFilesAccepted(heicFiles);
+          toast.success(`${heicFiles.length} HEIC ${heicFiles.length === 1 ? 'file' : 'files'} uploaded successfully!`);
+          
+          // Show warning if some files were filtered out
+          if (heicFiles.length < acceptedFiles.length) {
+            toast.warning(`${acceptedFiles.length - heicFiles.length} ${acceptedFiles.length - heicFiles.length === 1 ? 'file was' : 'files were'} skipped because they are not HEIC format.`);
+          }
         } else {
-          toast.error("Please upload a HEIC file");
+          toast.error("Please upload HEIC files only");
         }
       }
     },
-    [onFileAccepted]
+    [onFilesAccepted]
   );
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -39,7 +43,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ onFileAccepted }) => {
       'image/heic': ['.heic'],
       'image/heif': ['.heif'],
     },
-    maxFiles: 1,
+    multiple: true,
   });
 
   React.useEffect(() => {
@@ -65,12 +69,12 @@ const FileUpload: React.FC<FileUploadProps> = ({ onFileAccepted }) => {
           {dragActive ? (
             <FileImage className="w-8 h-8 animate-pulse-glow" />
           ) : (
-            <Upload className="w-8 h-8 animate-bounce-subtle" />
+            <FilesIcon className="w-8 h-8 animate-bounce-subtle" />
           )}
         </div>
         <div className="text-center">
           <h3 className="font-medium text-lg mb-1">
-            {dragActive ? "Drop your HEIC file here" : "Drag & drop your HEIC file here"}
+            {dragActive ? "Drop your HEIC files here" : "Drag & drop multiple HEIC files here"}
           </h3>
           <p className="text-sm text-muted-foreground mb-4">
             or click to browse files

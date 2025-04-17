@@ -3,13 +3,13 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { ConversionFormat, downloadBlob, generateFileName } from "@/utils/imageUtils";
-import { Download, RefreshCcw, Sparkles, CheckCircle } from "lucide-react";
+import { ConversionFormat, downloadMultipleBlobs } from "@/utils/imageUtils";
+import { Download, RefreshCcw, Sparkles, CheckCircle, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 interface ConversionOptionsProps {
-  file: File | null;
-  convertedBlob: Blob | null;
+  files: File[];
+  convertedBlobs: { blob: Blob, originalFile: File }[] | null;
   selectedFormat: ConversionFormat;
   isConverting: boolean;
   onFormatChange: (format: ConversionFormat) => void;
@@ -17,20 +17,19 @@ interface ConversionOptionsProps {
 }
 
 const ConversionOptions: React.FC<ConversionOptionsProps> = ({
-  file,
-  convertedBlob,
+  files,
+  convertedBlobs,
   selectedFormat,
   isConverting,
   onFormatChange,
   onConvert,
 }) => {
   const handleDownload = async () => {
-    if (!file || !convertedBlob) return;
+    if (!files.length || !convertedBlobs?.length) return;
     
-    const fileName = generateFileName(file.name, selectedFormat);
-    await downloadBlob(convertedBlob, fileName);
+    await downloadMultipleBlobs(convertedBlobs, selectedFormat);
     
-    toast.success("File downloaded successfully!");
+    toast.success(`${convertedBlobs.length} ${convertedBlobs.length === 1 ? 'file' : 'files'} downloaded successfully!`);
     
     // Create confetti effect on download
     createConfetti();
@@ -100,15 +99,15 @@ const ConversionOptions: React.FC<ConversionOptionsProps> = ({
       <div className="flex flex-col sm:flex-row gap-3">
         <Button
           onClick={onConvert}
-          disabled={!file || isConverting}
+          disabled={!files.length || isConverting}
           className="btn-gradient flex-1 py-6"
         >
           {isConverting ? (
             <>
               <RefreshCcw className="mr-2 h-4 w-4 animate-spin" />
-              Converting...
+              Converting {files.length} {files.length === 1 ? 'file' : 'files'}...
             </>
-          ) : convertedBlob ? (
+          ) : convertedBlobs?.length ? (
             <>
               <CheckCircle className="mr-2 h-4 w-4" />
               Converted to {selectedFormat.toUpperCase()}
@@ -116,21 +115,30 @@ const ConversionOptions: React.FC<ConversionOptionsProps> = ({
           ) : (
             <>
               <Sparkles className="mr-2 h-4 w-4" />
-              Convert to {selectedFormat.toUpperCase()}
+              Convert {files.length} {files.length === 1 ? 'file' : 'files'} to {selectedFormat.toUpperCase()}
             </>
           )}
         </Button>
         
         <Button
           onClick={handleDownload}
-          disabled={!convertedBlob || isConverting}
+          disabled={!convertedBlobs?.length || isConverting}
           variant="outline"
           className="flex-1 py-6 border-2 hover:bg-accent/10 hover:text-accent transition-colors"
         >
           <Download className="mr-2 h-4 w-4" />
-          Download
+          Download {convertedBlobs?.length || 0} {convertedBlobs?.length === 1 ? 'file' : 'files'}
         </Button>
       </div>
+      
+      {files.length > 1 && (
+        <div className="p-3 bg-muted/30 rounded-md flex items-center border border-muted">
+          <Loader2 className="w-4 h-4 mr-2 text-muted-foreground" />
+          <p className="text-sm text-muted-foreground">
+            Converting multiple files may take longer depending on their size
+          </p>
+        </div>
+      )}
     </div>
   );
 };
