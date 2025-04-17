@@ -1,5 +1,7 @@
 
 import heic2any from "heic2any";
+import JSZip from "jszip";
+import { jsPDF } from "jspdf";
 
 export type ConversionFormat = "png" | "jpeg";
 
@@ -88,24 +90,127 @@ export function generateFileName(originalName: string, format: ConversionFormat)
   return `${baseName}.${format === "jpeg" ? "jpg" : format}`;
 }
 
-// New function to batch download multiple files
-export async function downloadMultipleBlobs(
+// Function to download a single file
+export async function downloadSingleFile(
+  blobData: {blob: Blob, originalFile: File},
+  format: ConversionFormat
+): Promise<void> {
+  const { blob, originalFile } = blobData;
+  const fileName = generateFileName(originalFile.name, format);
+  await downloadBlob(blob, fileName);
+}
+
+// Function to download multiple files as ZIP
+export async function downloadAsZip(
   blobFileData: {blob: Blob, originalFile: File}[],
   format: ConversionFormat
 ): Promise<void> {
-  if (blobFileData.length === 1) {
-    // Single file download
-    const { blob, originalFile } = blobFileData[0];
+  const zip = new JSZip();
+  
+  // Add each blob to the zip file
+  blobFileData.forEach(({ blob, originalFile }) => {
     const fileName = generateFileName(originalFile.name, format);
-    await downloadBlob(blob, fileName);
-    return;
+    zip.file(fileName, blob);
+  });
+  
+  // Generate the zip file and download it
+  const zipBlob = await zip.generateAsync({ type: "blob" });
+  await downloadBlob(zipBlob, `converted_images_${Date.now()}.zip`);
+}
+
+// Function to create and download a PDF with all images
+export async function downloadAsPdf(
+  blobFileData: {blob: Blob, originalFile: File}[],
+  format: ConversionFormat
+): Promise<void> {
+  // Create a new PDF document
+  const pdf = new jsPDF({
+    orientation: "portrait",
+    unit: "mm",
+  });
+  
+  const pageWidth = pdf.internal.pageSize.getWidth();
+  const pageHeight = pdf.internal.pageSize.getHeight();
+  const margin = 10; // 10mm margin
+  const maxWidth = pageWidth - (margin * 2);
+  const maxHeight = pageHeight - (margin * 2);
+  
+  let isFirstPage = true;
+  
+  // Process each image and add it to the PDF
+  for (let i = 0; i < blobFileData.length; i++) {
+    const { blob } = blobFileData[i];
+    
+    // Convert blob to data URL
+    const dataUrl = await blobToDataUrl(blob);
+    
+    // Create a temporary image to get dimensions
+    const img = new Image();
+    await new Promise((resolve) => {
+      img.onload = resolve;
+      img.src = dataUrl;
+    });
+    
+    // Calculate image dimensions to fit within page while maintaining aspect ratio
+    let imgWidth = img.width;
+    let imgHeight = img.height;
+    
+    if (imgWidth > maxWidth) {
+      const ratio = maxWidth / imgWidth;
+      imgWidth = maxWidth;
+      imgHeight = imgHeight * ratio;
+    }
+    
+    if (imgHeight > maxHeight) {
+      const ratio = maxHeight / imgHeight;
+      imgHeight = maxHeight;
+      imgWidth = imgWidth * ratio;
+    }
+    
+    // Add a new page for each image except the first one
+    if (!isFirstPage) {
+      pdf.addPage();
+    } else {
+      isFirstPage = false;
+    }
+    
+    // Add image to PDF, centered on the page
+    const x = margin + (maxWidth - imgWidth) / 2;
+    const y = margin + (maxHeight - imgHeight) / 2;
+    pdf.addImage(dataUrl, format === "jpeg" ? "JPEG" : "PNG", x, y, imgWidth, imgHeight);
   }
   
-  // Create a zip file if there are multiple files
-  // For now, download them sequentially
-  for (const { blob, originalFile } of blobFileData) {
-    const fileName = generateFileName(originalFile.name, format);
-    await downloadBlob(blob, fileName);
+  // Save and download the PDF
+  pdf.save(`converted_images_${Date.now()}.pdf`);
+}
+
+// New function to batch download multiple files with different options
+export async function downloadMultipleBlobs(
+  blobFileData: {blob: Blob, originalFile: File}[],
+  format: ConversionFormat,
+  downloadType: "individual" | "zip" | "pdf" = "individual"
+): Promise<void> {
+  if (!blobFileData.length) return;
+  
+  switch (downloadType) {
+    case "zip":
+      await downloadAsZip(blobFileData, format);
+      break;
+    case "pdf":
+      await downloadAsPdf(blobFileData, format);
+      break;
+    case "individual":
+    default:
+      if (blobFileData.length === 1) {
+        // Single file download
+        await downloadSingleFile(blobFileData[0], format);
+      } else {
+        // Multiple individual downloads
+        for (const fileData of blobFileData) {
+          await downloadSingleFile(fileData, format);
+        }
+      }
+      break;
   }
 }
 

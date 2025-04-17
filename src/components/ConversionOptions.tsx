@@ -1,11 +1,27 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { ConversionFormat, downloadMultipleBlobs } from "@/utils/imageUtils";
-import { Download, RefreshCcw, Sparkles, CheckCircle, Loader2, Zap } from "lucide-react";
+import { 
+  Download, 
+  RefreshCcw, 
+  CheckCircle, 
+  Loader2, 
+  Zap, 
+  FileDown, 
+  FileArchive, 
+  FileText, 
+  ChevronDown
+} from "lucide-react";
 import { toast } from "sonner";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface ConversionOptionsProps {
   files: File[];
@@ -16,6 +32,8 @@ interface ConversionOptionsProps {
   onConvert: () => void;
 }
 
+type DownloadType = "individual" | "zip" | "pdf";
+
 const ConversionOptions: React.FC<ConversionOptionsProps> = ({
   files,
   convertedBlobs,
@@ -24,15 +42,40 @@ const ConversionOptions: React.FC<ConversionOptionsProps> = ({
   onFormatChange,
   onConvert,
 }) => {
-  const handleDownload = async () => {
+  const [isDownloading, setIsDownloading] = useState(false);
+  
+  const handleDownload = async (type: DownloadType) => {
     if (!files.length || !convertedBlobs?.length) return;
     
-    await downloadMultipleBlobs(convertedBlobs, selectedFormat);
+    setIsDownloading(true);
     
-    toast.success(`${convertedBlobs.length} ${convertedBlobs.length === 1 ? 'file' : 'files'} downloaded successfully!`);
-    
-    // Create confetti effect on download
-    createConfetti();
+    try {
+      await downloadMultipleBlobs(convertedBlobs, selectedFormat, type);
+      
+      let successMessage = "";
+      switch (type) {
+        case "zip":
+          successMessage = "Files downloaded as ZIP successfully!";
+          break;
+        case "pdf":
+          successMessage = "Files downloaded as PDF successfully!";
+          break;
+        default:
+          successMessage = `${convertedBlobs.length} ${convertedBlobs.length === 1 ? 'file' : 'files'} downloaded successfully!`;
+      }
+      
+      toast.success(successMessage);
+      
+      // Create confetti effect on download
+      if (type !== "individual" || convertedBlobs.length === 1) {
+        createConfetti();
+      }
+    } catch (error) {
+      console.error("Download error:", error);
+      toast.error("Failed to download files. Please try again.");
+    } finally {
+      setIsDownloading(false);
+    }
   };
   
   const createConfetti = () => {
@@ -120,15 +163,66 @@ const ConversionOptions: React.FC<ConversionOptionsProps> = ({
           )}
         </Button>
         
-        <Button
-          onClick={handleDownload}
-          disabled={!convertedBlobs?.length || isConverting}
-          variant="outline"
-          className="flex-1 py-6 border-2 hover:bg-accent/10 hover:text-accent transition-colors"
-        >
-          <Download className="mr-2 h-4 w-4" />
-          Download {convertedBlobs?.length || 0} {convertedBlobs?.length === 1 ? 'file' : 'files'}
-        </Button>
+        {convertedBlobs?.length === 1 ? (
+          <Button
+            onClick={() => handleDownload("individual")}
+            disabled={!convertedBlobs?.length || isConverting || isDownloading}
+            variant="outline"
+            className="flex-1 py-6 border-2 hover:bg-accent/10 hover:text-accent transition-colors"
+          >
+            <Download className="mr-2 h-4 w-4" />
+            Download File
+          </Button>
+        ) : (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                disabled={!convertedBlobs?.length || isConverting || isDownloading}
+                variant="outline"
+                className="flex-1 py-6 border-2 hover:bg-accent/10 hover:text-accent transition-colors"
+              >
+                {isDownloading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Downloading...
+                  </>
+                ) : (
+                  <>
+                    <Download className="mr-2 h-4 w-4" />
+                    Download {convertedBlobs?.length || 0} Files
+                    <ChevronDown className="ml-2 h-4 w-4" />
+                  </>
+                )}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-[200px]">
+              <DropdownMenuItem 
+                onClick={() => handleDownload("individual")}
+                disabled={isDownloading}
+                className="cursor-pointer"
+              >
+                <FileDown className="mr-2 h-4 w-4" />
+                Download Individually
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={() => handleDownload("zip")}
+                disabled={isDownloading}
+                className="cursor-pointer"
+              >
+                <FileArchive className="mr-2 h-4 w-4" />
+                Download as ZIP
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={() => handleDownload("pdf")}
+                disabled={isDownloading}
+                className="cursor-pointer"
+              >
+                <FileText className="mr-2 h-4 w-4" />
+                Download as PDF
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
       </div>
       
       {files.length > 1 && (
