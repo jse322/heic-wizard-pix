@@ -1,15 +1,19 @@
 
 import React from "react";
-import { Wand2, Image } from "lucide-react";
+import { SparklesIcon, Image, Sun, Moon } from "lucide-react";
+import { useTheme } from "@/hooks/useTheme";
+import { Toggle } from "@/components/ui/toggle";
 
 const Header: React.FC = () => {
+  const { theme, toggleTheme } = useTheme();
+  
   return (
     <header className="py-6 mb-8">
       <div className="flex flex-col items-center text-center">
         <div className="flex items-center gap-3 mb-4">
           <div className="relative">
             <div className="rounded-full bg-gradient-wizard p-3 shadow-lg animate-float">
-              <Wand2 className="h-6 w-6 text-white animate-pulse-glow" />
+              <SparklesIcon className="h-6 w-6 text-white animate-pulse-glow" />
             </div>
             <div className="absolute -bottom-1 -right-1">
               <div className="rounded-full bg-white p-1.5 shadow-md">
@@ -18,8 +22,24 @@ const Header: React.FC = () => {
             </div>
           </div>
           <h1 className="text-3xl md:text-4xl font-bold bg-gradient-wizard text-transparent bg-clip-text">
-            HEIC Wizard
+            ImageMage
           </h1>
+          
+          <div className="ml-4">
+            <Toggle 
+              pressed={theme === "dark"} 
+              onPressedChange={toggleTheme}
+              className="rounded-full p-2 h-8 w-8"
+              title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+              aria-label="Toggle dark mode"
+            >
+              {theme === "dark" ? (
+                <Sun className="h-4 w-4" />
+              ) : (
+                <Moon className="h-4 w-4" />
+              )}
+            </Toggle>
+          </div>
         </div>
         <p className="text-muted-foreground max-w-md">
           Magically convert your HEIC images to PNG or JPG with a simple drag and drop
