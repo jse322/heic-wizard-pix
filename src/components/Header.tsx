@@ -1,6 +1,6 @@
 
 import React from "react";
-import { SparklesIcon, Image, Sun, Moon } from "lucide-react";
+import { ApertureIcon, Image, Sun, Moon } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
 import { Toggle } from "@/components/ui/toggle";
 
@@ -13,7 +13,7 @@ const Header: React.FC = () => {
         <div className="flex items-center gap-3 mb-4">
           <div className="relative">
             <div className="rounded-full bg-gradient-wizard p-3 shadow-lg animate-float">
-              <SparklesIcon className="h-6 w-6 text-white animate-pulse-glow" />
+              <ApertureIcon className="h-6 w-6 text-white animate-pulse-glow" />
             </div>
             <div className="absolute -bottom-1 -right-1">
               <div className="rounded-full bg-white p-1.5 shadow-md">
@@ -65,3 +65,4 @@ const Header: React.FC = () => {
 };
 
 export default Header;
+
