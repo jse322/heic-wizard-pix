@@ -22,7 +22,7 @@ const Header: React.FC = () => {
             </div>
           </div>
           <h1 className="text-3xl md:text-4xl font-bold bg-gradient-wizard text-transparent bg-clip-text">
-            ImageMage
+            Image Format Converter
           </h1>
           
           <div className="ml-4">
@@ -42,7 +42,7 @@ const Header: React.FC = () => {
           </div>
         </div>
         <p className="text-muted-foreground max-w-md">
-          Magically convert your HEIC images to PNG or JPG with a simple drag and drop
+          Convert HEIC photos to JPG or PNG instantly. Free, secure, and all processing happens in your browser.
         </p>
         
         <div className="flex flex-wrap justify-center gap-3 mt-4">
