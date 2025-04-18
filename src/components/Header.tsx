@@ -1,6 +1,6 @@
 
 import React from "react";
-import { Code, Image, Sun, Moon } from "lucide-react";
+import { Aperture, Sun, Moon } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
 import { Toggle } from "@/components/ui/toggle";
 
@@ -13,7 +13,7 @@ const Header: React.FC = () => {
         <div className="flex items-center gap-3 mb-4">
           <div className="relative">
             <div className="rounded-full bg-gray-200 dark:bg-gray-700 p-3 shadow-md">
-              <Code className="h-6 w-6 text-gray-700 dark:text-gray-300" />
+              <Aperture className="h-6 w-6 text-gray-700 dark:text-gray-300" />
             </div>
           </div>
           <h1 className="text-3xl md:text-4xl font-bold text-gray-800 dark:text-gray-200">
