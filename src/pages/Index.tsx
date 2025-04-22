@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import FileUpload from "@/components/FileUpload";
 import ImagePreview from "@/components/ImagePreview";
@@ -123,7 +124,14 @@ const Index = () => {
                         // Open file dialog to add more files
                         const input = document.createElement('input');
                         input.type = 'file';
-                        input.accept = '.heic,.heif';
+                        
+                        // Set appropriate file types based on conversion mode
+                        if (conversionMode === "fromHeic") {
+                          input.accept = '.heic,.heif';
+                        } else {
+                          input.accept = '.jpg,.jpeg,.png';
+                        }
+                        
                         input.multiple = true;
                         input.onchange = (e) => {
                           const target = e.target as HTMLInputElement;
