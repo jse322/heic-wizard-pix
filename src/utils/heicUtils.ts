@@ -40,7 +40,6 @@ export async function convertToHeic(file: File): Promise<Blob> {
     const blob = await new Promise<Blob>((resolve, reject) => {
       canvas.toBlob((blob) => {
         if (blob) {
-          // Explicitly create a new Blob with the correct MIME type to ensure it's preserved
           resolve(new Blob([blob], { type: 'image/heic' }));
         } else {
           reject(new Error('Failed to convert to HEIC'));
@@ -122,12 +121,10 @@ export function generateHeicFileName(originalName: string): string {
  * Downloads a HEIC file
  */
 export async function downloadHeicFile(blob: Blob, fileName: string): Promise<void> {
-  // Ensure the blob has the correct MIME type
-  const heicBlob = new Blob([blob], { type: 'image/heic' });
-  const url = URL.createObjectURL(heicBlob);
+  const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = fileName.endsWith('.heic') ? fileName : `${fileName}.heic`;
+  a.download = fileName;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);

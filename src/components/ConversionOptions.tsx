@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { ConversionFormat, downloadMultipleBlobs } from "@/utils/imageUtils";
-import { downloadHeicFile, generateHeicFileName } from "@/utils/heicUtils";
 import { 
   Download, 
   RefreshCcw, 
@@ -44,20 +43,6 @@ const ConversionOptions: React.FC<ConversionOptionsProps> = ({
   onConvert,
 }) => {
   const [isDownloading, setIsDownloading] = useState(false);
-  const [conversionMode, setConversionMode] = useState<"fromHeic" | "toHeic">(
-    () => {
-      // Check the first file to determine mode
-      if (files.length > 0) {
-        const firstFile = files[0];
-        if (firstFile.type.includes('heic') || firstFile.name.toLowerCase().endsWith('.heic')) {
-          return "fromHeic";
-        } else {
-          return "toHeic";
-        }
-      }
-      return "fromHeic"; // Default
-    }
-  );
   
   const handleDownload = async (type: DownloadType) => {
     if (!files.length || !convertedBlobs?.length) return;
@@ -65,47 +50,21 @@ const ConversionOptions: React.FC<ConversionOptionsProps> = ({
     setIsDownloading(true);
     
     try {
-      // Check if we're dealing with HEIC output or PNG/JPG output
-      const isHeicOutput = files.some(file => 
-        !file.type.includes('heic') && !file.name.toLowerCase().endsWith('.heic')
-      );
+      await downloadMultipleBlobs(convertedBlobs, selectedFormat, type);
       
-      if (isHeicOutput) {
-        // This is toHEIC conversion
-        if (type === "individual") {
-          // Download individual HEIC files
-          for (const fileData of convertedBlobs) {
-            const heicFileName = generateHeicFileName(fileData.originalFile.name);
-            await downloadHeicFile(fileData.blob, heicFileName);
-          }
-          toast.success(`${convertedBlobs.length} ${convertedBlobs.length === 1 ? 'HEIC file' : 'HEIC files'} downloaded successfully!`);
-        } else {
-          // For ZIP or PDF, we need special handling for HEIC files
-          // Since we can't easily create HEIC archives, let's use normal download
-          for (const fileData of convertedBlobs) {
-            const heicFileName = generateHeicFileName(fileData.originalFile.name);
-            await downloadHeicFile(fileData.blob, heicFileName);
-          }
-          toast.success(`${convertedBlobs.length} ${convertedBlobs.length === 1 ? 'HEIC file' : 'HEIC files'} downloaded individually!`);
-        }
-      } else {
-        // Normal PNG/JPG download process
-        await downloadMultipleBlobs(convertedBlobs, selectedFormat, type);
-        
-        let successMessage = "";
-        switch (type) {
-          case "zip":
-            successMessage = "Files downloaded as ZIP successfully!";
-            break;
-          case "pdf":
-            successMessage = "Files downloaded as PDF successfully!";
-            break;
-          default:
-            successMessage = `${convertedBlobs.length} ${convertedBlobs.length === 1 ? 'file' : 'files'} downloaded successfully!`;
-        }
-        
-        toast.success(successMessage);
+      let successMessage = "";
+      switch (type) {
+        case "zip":
+          successMessage = "Files downloaded as ZIP successfully!";
+          break;
+        case "pdf":
+          successMessage = "Files downloaded as PDF successfully!";
+          break;
+        default:
+          successMessage = `${convertedBlobs.length} ${convertedBlobs.length === 1 ? 'file' : 'files'} downloaded successfully!`;
       }
+      
+      toast.success(successMessage);
       
       // Create confetti effect on download
       if (type !== "individual" || convertedBlobs.length === 1) {
