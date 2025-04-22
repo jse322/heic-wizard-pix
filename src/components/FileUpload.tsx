@@ -6,42 +6,67 @@ import { toast } from "sonner";
 
 interface FileUploadProps {
   onFilesAccepted: (files: File[]) => void;
+  mode?: "toHeic" | "fromHeic";
 }
 
-const FileUpload: React.FC<FileUploadProps> = ({ onFilesAccepted }) => {
+const FileUpload: React.FC<FileUploadProps> = ({ onFilesAccepted, mode = "fromHeic" }) => {
   const [dragActive, setDragActive] = useState(false);
 
   const onDrop = useCallback(
     (acceptedFiles: File[]) => {
       if (acceptedFiles && acceptedFiles.length > 0) {
-        // Filter to only accept HEIC files
-        const heicFiles = acceptedFiles.filter(file => 
-          file.name.toLowerCase().endsWith('.heic') || 
-          file.type.includes('heic')
-        );
-          
-        if (heicFiles.length > 0) {
-          onFilesAccepted(heicFiles);
-          toast.success(`${heicFiles.length} HEIC ${heicFiles.length === 1 ? 'file' : 'files'} uploaded successfully!`);
-          
-          // Show warning if some files were filtered out
-          if (heicFiles.length < acceptedFiles.length) {
-            toast.warning(`${acceptedFiles.length - heicFiles.length} ${acceptedFiles.length - heicFiles.length === 1 ? 'file was' : 'files were'} skipped because they are not HEIC format.`);
+        if (mode === "fromHeic") {
+          // Filter to only accept HEIC files
+          const heicFiles = acceptedFiles.filter(file => 
+            file.name.toLowerCase().endsWith('.heic') || 
+            file.type.includes('heic')
+          );
+            
+          if (heicFiles.length > 0) {
+            onFilesAccepted(heicFiles);
+            toast.success(`${heicFiles.length} HEIC ${heicFiles.length === 1 ? 'file' : 'files'} uploaded successfully!`);
+            
+            if (heicFiles.length < acceptedFiles.length) {
+              toast.warning(`${acceptedFiles.length - heicFiles.length} ${acceptedFiles.length - heicFiles.length === 1 ? 'file was' : 'files were'} skipped because they are not HEIC format.`);
+            }
+          } else {
+            toast.error("Please upload HEIC files only");
           }
         } else {
-          toast.error("Please upload HEIC files only");
+          // Filter to only accept PNG/JPG files
+          const imageFiles = acceptedFiles.filter(file => 
+            file.type.includes('png') || 
+            file.type.includes('jpeg') || 
+            file.name.toLowerCase().match(/\.(png|jpe?g)$/)
+          );
+            
+          if (imageFiles.length > 0) {
+            onFilesAccepted(imageFiles);
+            toast.success(`${imageFiles.length} ${imageFiles.length === 1 ? 'file' : 'files'} uploaded successfully!`);
+            
+            if (imageFiles.length < acceptedFiles.length) {
+              toast.warning(`${acceptedFiles.length - imageFiles.length} ${acceptedFiles.length - imageFiles.length === 1 ? 'file was' : 'files were'} skipped because they are not PNG/JPG format.`);
+            }
+          } else {
+            toast.error("Please upload PNG or JPG files only");
+          }
         }
       }
     },
-    [onFilesAccepted]
+    [onFilesAccepted, mode]
   );
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
-    accept: {
-      'image/heic': ['.heic'],
-      'image/heif': ['.heif'],
-    },
+    accept: mode === "fromHeic" 
+      ? {
+          'image/heic': ['.heic'],
+          'image/heif': ['.heif'],
+        }
+      : {
+          'image/png': ['.png'],
+          'image/jpeg': ['.jpg', '.jpeg'],
+        },
     multiple: true,
   });
 
@@ -71,14 +96,16 @@ const FileUpload: React.FC<FileUploadProps> = ({ onFilesAccepted }) => {
         </div>
         <div className="text-center">
           <h3 className="font-medium text-lg mb-1 text-gray-800 dark:text-gray-200">
-            {dragActive ? "Drop your HEIC files here" : "Drag & drop multiple HEIC files here"}
+            {dragActive 
+              ? `Drop your ${mode === "fromHeic" ? "HEIC" : "PNG/JPG"} files here` 
+              : `Drag & drop multiple ${mode === "fromHeic" ? "HEIC" : "PNG/JPG"} files here`}
           </h3>
           <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
             or click to browse files
           </p>
           <div className="flex items-center justify-center text-xs text-gray-500 dark:text-gray-500 gap-1.5">
             <AlertCircle className="w-3 h-3" />
-            <span>Only HEIC images are supported</span>
+            <span>Only {mode === "fromHeic" ? "HEIC" : "PNG/JPG"} images are supported</span>
           </div>
         </div>
       </div>
@@ -87,3 +114,4 @@ const FileUpload: React.FC<FileUploadProps> = ({ onFilesAccepted }) => {
 };
 
 export default FileUpload;
+

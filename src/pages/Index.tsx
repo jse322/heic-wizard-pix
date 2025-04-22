@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import FileUpload from "@/components/FileUpload";
 import ImagePreview from "@/components/ImagePreview";
@@ -6,6 +5,7 @@ import ConversionOptions from "@/components/ConversionOptions";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { ConversionFormat, convertMultipleHeicFiles } from "@/utils/imageUtils";
+import { convertMultipleToHeic } from "@/utils/heicUtils";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Trash2, FilesIcon } from "lucide-react";
@@ -15,6 +15,7 @@ const Index = () => {
   const [convertedBlobs, setConvertedBlobs] = useState<{ blob: Blob, originalFile: File }[] | null>(null);
   const [selectedFormat, setSelectedFormat] = useState<ConversionFormat>("png");
   const [isConverting, setIsConverting] = useState(false);
+  const [conversionMode, setConversionMode] = useState<"fromHeic" | "toHeic">("fromHeic");
 
   const handleFilesAccepted = (newFiles: File[]) => {
     setFiles(prev => {
@@ -52,9 +53,14 @@ const Index = () => {
     setConvertedBlobs(null);
 
     try {
-      const converted = await convertMultipleHeicFiles(files, selectedFormat);
+      let converted;
+      if (conversionMode === "fromHeic") {
+        converted = await convertMultipleHeicFiles(files, selectedFormat);
+      } else {
+        converted = await convertMultipleToHeic(files);
+      }
       setConvertedBlobs(converted);
-      toast.success(`Successfully converted ${converted.length} ${converted.length === 1 ? 'file' : 'files'} to ${selectedFormat.toUpperCase()}`);
+      toast.success(`Successfully converted ${converted.length} ${converted.length === 1 ? 'file' : 'files'} to ${conversionMode === "fromHeic" ? selectedFormat.toUpperCase() : 'HEIC'}`);
     } catch (error) {
       console.error("Error during conversion:", error);
       toast.error("Failed to convert some files. Please try again or check the file formats.");
@@ -75,8 +81,31 @@ const Index = () => {
           <Header />
 
           <main className="space-y-8">
+            <div className="flex justify-center gap-4 mb-8">
+              <Button
+                variant={conversionMode === "fromHeic" ? "default" : "outline"}
+                onClick={() => {
+                  setConversionMode("fromHeic");
+                  setFiles([]);
+                  setConvertedBlobs(null);
+                }}
+              >
+                HEIC to PNG/JPG
+              </Button>
+              <Button
+                variant={conversionMode === "toHeic" ? "default" : "outline"}
+                onClick={() => {
+                  setConversionMode("toHeic");
+                  setFiles([]);
+                  setConvertedBlobs(null);
+                }}
+              >
+                PNG/JPG to HEIC
+              </Button>
+            </div>
+
             {files.length === 0 ? (
-              <FileUpload onFilesAccepted={handleFilesAccepted} />
+              <FileUpload onFilesAccepted={handleFilesAccepted} mode={conversionMode} />
             ) : (
               <>
                 <div className="flex justify-between items-center">
